@@ -1,0 +1,11 @@
+workflow: error-analysis
+healthy_data_dir: data
+patients_data_dir: data_kids
+eyes_conditions:
+  - closed
+  - open
+feature_modes:
+  - all
+  - corr_filter
+bootstrap_iters: 50
+ks_p_threshold: 0.01

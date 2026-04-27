@@ -1,0 +1,37 @@
+task: adolescence_binary
+data_dir: data
+eyes: closed
+max_per_group: null
+
+# Pretrained checkpoint (optional but recommended)
+checkpoint: eegpt/EEGPT/checkpoint/eegpt_mcae_58chs_4s_large4E.ckpt
+
+target_sfreq: 256.0
+window_seconds: 4.0
+channels:
+  - FP1
+  - FP2
+  - F7
+  - F3
+  - FZ
+  - F4
+  - F8
+  - T7
+  - C3
+  - CZ
+  - C4
+  - T8
+  - P7
+  - P3
+  - PZ
+  - P4
+  - P8
+  - O1
+  - O2
+
+train:
+  epochs: 10
+  batch_size: 16
+  lr: 1.0e-4
+  threshold: 0.5
+  device: cpu

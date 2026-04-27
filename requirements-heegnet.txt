@@ -1,0 +1,9 @@
+# Base thesis dependencies
+-r requirements.txt
+
+# HEEGNet training runtime
+torch
+torchvision
+pandas
+pyyaml
+geoopt

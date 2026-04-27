@@ -1,0 +1,8 @@
+workflow: train
+model_family: xgb
+eyes: closed
+feature_mode: all
+data_dir: data
+results_dir: results
+max_per_group: null
+random_state: 42

@@ -1,0 +1,7 @@
+workflow: dfa
+healthy_data_dir: data
+patients_data_dir: data_kids
+eyes: closed
+min_scale: 4
+order: 1
+out_dir: results/dfa_analysis

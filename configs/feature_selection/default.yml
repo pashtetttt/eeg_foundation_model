@@ -1,0 +1,7 @@
+workflow: feature_selection
+eyes: open
+data_dir: data
+out_dir: results/feature_selection
+n_splits: 5
+topn_keep: 100
+random_state: 42

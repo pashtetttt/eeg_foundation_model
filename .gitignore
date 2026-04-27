@@ -16,13 +16,21 @@ env/
 .idea/
 .vscode/
 
+# Archives and local bundles
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
 # Data and heavyweight artifacts (keep docs/summaries tracked)
 data/
+data_all/
 data_kids/
 processed/
 qc_output/
 
 # Raw and intermediate run artifacts
+logs/
 results/**/*.txt
 results/**/*.json
 results/**/*.csv
@@ -36,3 +44,12 @@ results/**/*.pdf
 !results/reports/*.md
 !results/report_feature_importance_and_visualizations.md
 !results/report_metrics_single_runs_and_baselines.md
+
+# Model checkpoints / heavy binaries
+*.ckpt
+*.pt
+*.pth
+*.onnx
+
+# Notebook checkpoints
+.ipynb_checkpoints/

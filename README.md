@@ -25,6 +25,18 @@ Legacy experiment scripts are still present in the repository root for backward 
    - `make error-analysis`
    - `make dfa`
 
+If cloning from GitHub, include submodules:
+
+- `git clone --recurse-submodules <repo-url>`
+- or after clone: `git submodule update --init --recursive`
+
+## HEEGNet Training
+
+- Install runtime deps: `python3 -m pip install -r requirements-heegnet.txt`
+- Config run: `python3 scripts/train_heegnet.py --config configs/heegnet_age4.yaml`
+- Smoke test override: `python3 scripts/train_heegnet.py --config configs/heegnet_age4.yaml --limit-total 64 --epochs 3 --device cpu`
+- Full-run guide: `docs/heegnet_remote_training.md`
+
 ## Data
 
 Raw EEG data is not versioned in GitHub. See `docs/data.md` for expected local directory structure and naming assumptions.
