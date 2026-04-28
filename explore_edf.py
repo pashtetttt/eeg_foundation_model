@@ -3,7 +3,7 @@ EEG EDF Data Exploration
 
 Explores one sample EDF file from the thesis dataset using MNE-Python.
 
-Dataset folders: дошкольники (124), младшие школьники (177), подростки (160), юность (273)
+Dataset folders: preschooler, primary, teenager, adolescence
 
 Run from the thesis folder: python explore_edf.py
 """
@@ -15,13 +15,13 @@ import matplotlib.pyplot as plt
 # Base path (thesis folder — run script from there, or set absolute path)
 BASE = Path(".")
 
-# Example file: one EDF from дошкольники (preschoolers)
-EXAMPLE_EDF = BASE / "дошкольники (124)" / "6(38)" / "настя_6_zg.EDF"
+# Example file: one EDF from preschooler
+EXAMPLE_EDF = BASE / "preschooler" / "6(38)" / "настя_6_zg.EDF"
 
 # Alternatively, pick from other groups:
-# EXAMPLE_EDF = BASE / "младшие школьники (177)" / "..." / "file.edf"
-# EXAMPLE_EDF = BASE / "подростки (160)" / "..." / "file.edf"
-# EXAMPLE_EDF = BASE / "юность(273)" / "23(42)" / "male_23_og.edf"
+# EXAMPLE_EDF = BASE / "primary" / "..." / "file.edf"
+# EXAMPLE_EDF = BASE / "teenager" / "..." / "file.edf"
+# EXAMPLE_EDF = BASE / "adolescence" / "23(42)" / "male_23_og.edf"
 
 if not EXAMPLE_EDF.exists():
     raise FileNotFoundError(f"File not found: {EXAMPLE_EDF}")

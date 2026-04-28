@@ -62,10 +62,10 @@ RESULTS_DIR = BASE / "results"
 VIS_DIR = RESULTS_DIR / "visualizations"
 
 GROUPS = {
-    "дошкольники (124)": "preschooler",
-    "младшие школьники (177)": "primary",
-    "подростки (160)": "teenager",
-    "юность(273)": "adolescence",
+    "preschooler": "preschooler",
+    "primary": "primary",
+    "teenager": "teenager",
+    "adolescence": "adolescence",
 }
 
 RANDOM_STATE = 42

@@ -18,8 +18,8 @@ PROCESSED_DIR = BASE / "processed"
 QC_OUTPUT_DIR = BASE / "qc_output"
 
 # Example file (same as process_edf.py)
-EXAMPLE_EDF = BASE / "дошкольники (124)" / "6(38)" / "настя_6_zg.EDF"
-EXAMPLE_FIF = PROCESSED_DIR / "дошкольники (124)" / "6(38)" / "настя_6_zg_processed.fif"
+EXAMPLE_EDF = BASE / "preschooler" / "6(38)" / "настя_6_zg.EDF"
+EXAMPLE_FIF = PROCESSED_DIR / "preschooler" / "6(38)" / "настя_6_zg_processed.fif"
 
 DURATION_PLOT = 10  # seconds for time-series comparison
 FMIN, FMAX = 1.0, 40.0

@@ -24,10 +24,10 @@ PROCESSED_DIR = BASE / "processed"
 
 # Group folders and class names
 GROUPS = {
-    "дошкольники (124)": "preschooler",
-    "младшие школьники (177)": "primary",
-    "подростки (160)": "teenager",
-    "юность(273)": "adolescence",
+    "preschooler": "preschooler",
+    "primary": "primary",
+    "teenager": "teenager",
+    "adolescence": "adolescence",
 }
 
 # Filtering
@@ -123,11 +123,11 @@ def process_one_file(edf_path: Path, out_path: Path) -> bool:
 
 def run_example():
     """Process single example file and save to processed/."""
-    example = BASE / "дошкольники (124)" / "6(38)" / "настя_6_zg.EDF"
+    example = BASE / "preschooler" / "6(38)" / "настя_6_zg.EDF"
     if not example.exists():
         raise FileNotFoundError(f"Example file not found: {example}")
 
-    out = PROCESSED_DIR / "дошкольники (124)" / "6(38)" / "настя_6_zg_processed.fif"
+    out = PROCESSED_DIR / "preschooler" / "6(38)" / "настя_6_zg_processed.fif"
     print(f"Processing example: {example.name}")
     ok = process_one_file(example, out)
     if ok:

@@ -35,10 +35,10 @@ DATA_DIR = BASE / "data"
 RESULTS_DIR = BASE / "results"
 
 GROUPS = {
-    "дошкольники (124)": "preschooler",
-    "младшие школьники (177)": "primary",
-    "подростки (160)": "teenager",
-    "юность(273)": "adolescence",
+    "preschooler": "preschooler",
+    "primary": "primary",
+    "teenager": "teenager",
+    "adolescence": "adolescence",
 }
 
 RANDOM_STATE = 42
@@ -53,7 +53,7 @@ def find_edf_files(data_dir: Path, group_folder: str, max_per_group: int | None,
     """Find .edf files in group folder, optionally limit count."""
     folder = data_dir / group_folder
     if not folder.exists():
-        # Support alternate dataset folder naming (e.g. "дошкольники" instead of "дошкольники (124)")
+        # Support alternate dataset folder naming by prefix matching.
         prefix = group_folder.split("(")[0].strip()
         candidates = [p for p in data_dir.iterdir() if p.is_dir() and p.name.strip().startswith(prefix)]
         if len(candidates) == 1:

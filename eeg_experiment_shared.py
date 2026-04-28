@@ -23,18 +23,17 @@ RESULTS_DIR = BASE / "results"
 DEFAULT_SELECTED_FEATURES_PATH = RESULTS_DIR / "selected_features_k150_mutual_info_20260319_205929.txt"
 
 GROUPS = {
-    "дошкольники (124)": "preschooler",
-    "младшие школьники (177)": "primary",
-    "подростки (160)": "teenager",
-    "юность(273)": "adolescence",
+    "preschooler": "preschooler",
+    "primary": "primary",
+    "teenager": "teenager",
+    "adolescence": "adolescence",
 }
 
-# Папки в data_kids без суффиксов «(N)»; метки классов те же, порядок как в GROUPS.
 GROUPS_DATA_KIDS = {
-    "дошкольники": "preschooler",
-    "младшие школьники": "primary",
-    "подростки": "teenager",
-    "юность": "adolescence",
+    "preschooler": "preschooler",
+    "primary": "primary",
+    "teenager": "teenager",
+    "adolescence": "adolescence",
 }
 
 RANDOM_STATE = 42
@@ -48,7 +47,7 @@ OPEN_EYES_SUBSTRINGS = ("_og", "_OG", "_ог", "_ОГ")
 def find_edf_files(data_dir: Path, group_folder: str, max_per_group: int | None, eyes_condition: str = "closed") -> list[Path]:
     folder = data_dir / group_folder
     if not folder.exists():
-        # Support alternate dataset folder naming (e.g. "дошкольники" instead of "дошкольники (124)")
+        # Support alternate dataset folder naming by prefix matching.
         prefix = group_folder.split("(")[0].strip()
         candidates = [p for p in data_dir.iterdir() if p.is_dir() and p.name.strip().startswith(prefix)]
         if len(candidates) == 1:
