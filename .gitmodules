@@ -1,6 +1,6 @@
 [submodule "eegpt/EEGPT"]
 	path = eegpt/EEGPT
-	url = https://github.com/BINE022/EEGPT.git
+	url = https://github.com/pashtetttt/EEGPT.git
 [submodule "heegnet/HEEGNet"]
 	path = heegnet/HEEGNet
-	url = https://github.com/fightlesliefigt/HEEGNet.git
+	url = https://github.com/pashtetttt/HEEGNet.git
