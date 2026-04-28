@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import yaml
 from sklearn.metrics import balanced_accuracy_score, classification_report, f1_score
 from sklearn.model_selection import StratifiedShuffleSplit
 
@@ -18,18 +19,37 @@ from eeg_thesis.eegpt_data import load_eegpt_dataset_from_edf
 from eeg_experiment_shared import RANDOM_STATE, TEST_SIZE
 
 
+def _load_config(path: Path | None) -> dict:
+    if path is None:
+        return {}
+    if not path.exists():
+        raise FileNotFoundError(f"Config file not found: {path}")
+    with path.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    if not isinstance(data, dict):
+        raise ValueError("Config must be a YAML mapping.")
+    return data
+
+
 def parse_args() -> argparse.Namespace:
+    pre = argparse.ArgumentParser(add_help=False)
+    pre.add_argument("--config", type=Path, default=None)
+    pre_args, _ = pre.parse_known_args()
+    cfg = _load_config(pre_args.config)
+    train_cfg = cfg.get("train", {}) if isinstance(cfg.get("train", {}), dict) else {}
+
     ap = argparse.ArgumentParser(description="EEGPT age4 training (multiclass).")
-    ap.add_argument("--data-dir", type=Path, default=Path("data"))
-    ap.add_argument("--eyes", type=str, default="closed", choices=["closed", "open"])
-    ap.add_argument("--max", type=int, default=None)
-    ap.add_argument("--checkpoint", type=Path, default=None, help="Optional pretrained EEGPT checkpoint.")
-    ap.add_argument("--epochs", type=int, default=10)
-    ap.add_argument("--batch-size", type=int, default=16)
-    ap.add_argument("--lr", type=float, default=1e-4)
-    ap.add_argument("--target-sfreq", type=float, default=256.0)
-    ap.add_argument("--window-seconds", type=float, default=4.0)
-    ap.add_argument("--device", type=str, default="cpu")
+    ap.add_argument("--config", type=Path, default=pre_args.config, help="Path to YAML config.")
+    ap.add_argument("--data-dir", type=Path, default=Path(cfg.get("data_dir", "data")))
+    ap.add_argument("--eyes", type=str, default=cfg.get("eyes", "closed"), choices=["closed", "open"])
+    ap.add_argument("--max", type=int, default=cfg.get("max_per_group"))
+    ap.add_argument("--checkpoint", type=Path, default=cfg.get("checkpoint"), help="Optional pretrained EEGPT checkpoint.")
+    ap.add_argument("--epochs", type=int, default=train_cfg.get("epochs", 10))
+    ap.add_argument("--batch-size", type=int, default=train_cfg.get("batch_size", 16))
+    ap.add_argument("--lr", type=float, default=train_cfg.get("lr", 1e-4))
+    ap.add_argument("--target-sfreq", type=float, default=cfg.get("target_sfreq", 256.0))
+    ap.add_argument("--window-seconds", type=float, default=cfg.get("window_seconds", 4.0))
+    ap.add_argument("--device", type=str, default=train_cfg.get("device", "cpu"))
     return ap.parse_args()
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pickle
 from pathlib import Path
 import sys
 from typing import Iterable
@@ -138,6 +139,20 @@ def _strip_prefixes(state_dict: dict, prefixes: tuple[str, ...]) -> dict:
     return out
 
 
+def _remap_pretrain_keys_for_finetune(state_dict: dict) -> dict:
+    """
+    Map common pretraining checkpoint keys to finetune model keys.
+    Example: encoder.* -> target_encoder.*
+    """
+    remapped = {}
+    for k, v in state_dict.items():
+        nk = k
+        if nk.startswith("encoder."):
+            nk = "target_encoder." + nk[len("encoder.") :]
+        remapped[nk] = v
+    return remapped
+
+
 class EEGPTAdapter:
     """
     Thin wrapper around EEGPTClassifier for:
@@ -189,9 +204,23 @@ class EEGPTAdapter:
             raise RuntimeError("Model is not initialized")
         if not path.is_file():
             raise FileNotFoundError(f"Checkpoint not found: {path}")
-        ckpt = torch.load(path, map_location="cpu")
+        try:
+            ckpt = torch.load(path, map_location="cpu")
+        except pickle.UnpicklingError as e:
+            # PyTorch 2.6+ defaults to weights_only=True. Some older checkpoints
+            # require full unpickling and fail unless weights_only=False.
+            print(
+                "[EEGPTAdapter] weights-only checkpoint load failed; retrying with "
+                "weights_only=False. Use only with trusted checkpoints."
+            )
+            try:
+                ckpt = torch.load(path, map_location="cpu", weights_only=False)
+            except TypeError:
+                # Compatibility fallback for older torch versions.
+                ckpt = torch.load(path, map_location="cpu")
         state = _extract_state_dict(ckpt)
-        state = _strip_prefixes(state, prefixes=("model.", "module.", "target_encoder."))
+        state = _strip_prefixes(state, prefixes=("model.", "module."))
+        state = _remap_pretrain_keys_for_finetune(state)
         missing, unexpected = self.model.load_state_dict(state, strict=False)
         if missing:
             print(f"[EEGPTAdapter] Missing keys ({len(missing)}): {missing[:8]}{' ...' if len(missing) > 8 else ''}")

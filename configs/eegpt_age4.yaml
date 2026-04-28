@@ -4,7 +4,7 @@ eyes: closed
 max_per_group: null
 
 # Pretrained checkpoint (optional but recommended)
-checkpoint: eegpt/EEGPT/checkpoint/eegpt_mcae_58chs_4s_large4E.ckpt
+checkpoint: EEGPT_files/checkpoint/eegpt_mcae_58chs_4s_large4E.ckpt
 
 target_sfreq: 256.0
 window_seconds: 4.0
