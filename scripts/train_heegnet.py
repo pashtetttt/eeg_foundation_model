@@ -195,7 +195,8 @@ def main() -> None:
         chunk_size=X.shape[2],
         num_electrodes=X.shape[1],
         num_classes=n_classes,
-        domains=torch.unique(d_t[train_idx]),
+        # Register BN domains for all samples so validation/test domain ids exist.
+        domains=torch.unique(d_t),
         domain_adaptation=not args.no_domain_adaptation,
         bnorm_dispersion=bn.BatchNormDispersion.SCALAR,
         device=device,
@@ -205,17 +206,22 @@ def main() -> None:
     ).to(device=device, dtype=torch.float64)
 
     es = EarlyStopping(metric="val_loss", higher_is_better=False, patience=args.patience, verbose=False)
-    bn_sched = MomentumBatchNormScheduler(
-        epochs=max(args.epochs - 1, 1),
-        bs=args.batch_size,
-        bs0=args.batch_size,
-        tau0=0.85,
-    )
+    callbacks = [es]
+    if args.epochs > 1:
+        bn_sched = MomentumBatchNormScheduler(
+            epochs=max(args.epochs - 1, 1),
+            bs=args.batch_size,
+            bs0=args.batch_size,
+            tau0=0.85,
+        )
+        callbacks.append(bn_sched)
+    else:
+        print("Info: skipping MomentumBatchNormScheduler because epochs <= 1")
 
     trainer = Trainer(
         max_epochs=args.epochs,
         min_epochs=args.min_epochs,
-        callbacks=[es, bn_sched],
+        callbacks=callbacks,
         loss=torch.nn.CrossEntropyLoss(),
         device=device,
         dtype=torch.float64,
