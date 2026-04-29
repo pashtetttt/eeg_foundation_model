@@ -11,7 +11,7 @@ set -euo pipefail
 # Project path on Zhores-2
 PROJECT_DIR=/trinity/home/pavel.borisenko/lab/gpfs/neuro_ml/eeg_predict/eeg_foundation_model
 GPFS_BIND=/trinity/home/pavel.borisenko/lab/gpfs
-CONTAINER=docker://nvcr.io/nvidia/pytorch:24.07-py3
+CONTAINER=docker://nvcr.io/nvidia/pytorch:24.04-py3
 DATA_DIR_HOST=/trinity/home/pavel.borisenko/lab/gpfs/neuro_ml/eeg_predict/eeg_foundation_model/data
 DATA_DIR_CONT=/gpfs/neuro_ml/eeg_predict/eeg_foundation_model/data
 
@@ -42,6 +42,15 @@ singularity exec --nv \
     echo 'Container cwd:' \$(pwd)
     echo 'Container data dir:' ${DATA_DIR_CONT}
     ls -la ${DATA_DIR_CONT} | head -n 20
+    python - <<'PY'
+import torch
+print('torch:', torch.__version__)
+print('torch cuda:', torch.version.cuda)
+print('cuda available:', torch.cuda.is_available())
+if torch.cuda.is_available():
+    print('cuda device count:', torch.cuda.device_count())
+    print('cuda device 0:', torch.cuda.get_device_name(0))
+PY
     python -m pip install --user --upgrade pip &&
     # Do NOT install torch here: keep container's CUDA-matched torch build.
     python -m pip install --user pyyaml pandas geoopt mne antropy imbalanced-learn xgboost &&
