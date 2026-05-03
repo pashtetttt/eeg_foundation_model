@@ -37,6 +37,10 @@ singularity exec --nv \
   "${CONTAINER}" \
   bash -lc "
     set -euo pipefail
+    # Do not load ~/.local Python packages: they often install a user torch that
+    # mismatches the cluster driver and shadows the container CUDA build.
+    export PYTHONNOUSERSITE=1
+
     echo 'Container cwd:' \$(pwd)
     echo 'Container data dir:' ${DATA_DIR_CONT}
     ls -la ${DATA_DIR_CONT} | head -n 20
@@ -49,9 +53,20 @@ if torch.cuda.is_available():
     print('cuda device count:', torch.cuda.device_count())
     print('cuda device 0:', torch.cuda.get_device_name(0))
 PY
-    python -m pip install --user --upgrade pip &&
-    # Do NOT install torch here: keep container's CUDA-matched torch build.
-    python -m pip install --user pyyaml pandas geoopt mne antropy imbalanced-learn xgboost &&
+
+    DEPS_DIR=\$(pwd)/.slurm_job_deps
+    mkdir -p \"\$DEPS_DIR\"
+    python -m pip install --upgrade pip
+    # geoopt declares torch>=2; --no-deps avoids pulling a second torch into this tree.
+    python -m pip install --target \"\$DEPS_DIR\" --no-deps geoopt
+    python -m pip install --target \"\$DEPS_DIR\" pyyaml mne antropy imbalanced-learn xgboost
+    export PYTHONPATH=\"\$DEPS_DIR:\${PYTHONPATH:-}\"
+
+    python - <<'PY'
+import torch
+print('After job deps (expect CUDA=True if driver matches container):', torch.cuda.is_available())
+PY
+
     python scripts/train_heegnet.py \
       --config configs/heegnet_age4.yaml \
       --data-dir ${DATA_DIR_CONT} \
