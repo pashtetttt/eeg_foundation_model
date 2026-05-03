@@ -56,7 +56,7 @@ PY
 
     DEPS_DIR=\$(pwd)/.slurm_job_deps
     mkdir -p \"\$DEPS_DIR\"
-    python -m pip install --upgrade pip
+    # Do not run \"pip install --upgrade pip\": container FS is read-only under /usr/local.
     # geoopt declares torch>=2; --no-deps avoids pulling a second torch into this tree.
     python -m pip install --target \"\$DEPS_DIR\" --no-deps geoopt
     python -m pip install --target \"\$DEPS_DIR\" pyyaml mne antropy imbalanced-learn xgboost
