@@ -55,11 +55,16 @@ if torch.cuda.is_available():
 PY
 
     DEPS_DIR=\$(pwd)/.slurm_job_deps
-    mkdir -p \"\$DEPS_DIR\"
+    # Pip stages under \$TMPDIR then moves to --target; /tmp vs GPFS -> EXDEV (cross-device).
+    export TMPDIR=\$(pwd)/.pip_tmp
+    rm -rf \"\$TMPDIR\" \"\$DEPS_DIR\"
+    mkdir -p \"\$TMPDIR\" \"\$DEPS_DIR\"
     # Do not run \"pip install --upgrade pip\": container FS is read-only under /usr/local.
-    # geoopt declares torch>=2; --no-deps avoids pulling a second torch into this tree.
+    # Only install what is missing from the NGC image. Use --no-deps so pip does not put a
+    # second numpy/sklearn into \$DEPS_DIR (that shadows the image and breaks pandas ABI).
+    # HEEGNet nets import geoopt; edf_loader imports mne.
     python -m pip install --target \"\$DEPS_DIR\" --no-deps geoopt
-    python -m pip install --target \"\$DEPS_DIR\" pyyaml mne antropy imbalanced-learn xgboost
+    python -m pip install --target \"\$DEPS_DIR\" --no-deps mne
     export PYTHONPATH=\"\$DEPS_DIR:\${PYTHONPATH:-}\"
 
     python - <<'PY'

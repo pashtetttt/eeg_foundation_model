@@ -57,10 +57,13 @@ if torch.cuda.is_available():
 PY
 
     DEPS_DIR=\$(pwd)/.slurm_job_deps
-    mkdir -p \"\$DEPS_DIR\"
+    export TMPDIR=\$(pwd)/.pip_tmp
+    rm -rf \"\$TMPDIR\" \"\$DEPS_DIR\"
+    mkdir -p \"\$TMPDIR\" \"\$DEPS_DIR\"
     # Do not run \"pip install --upgrade pip\": container FS is read-only under /usr/local.
-    python -m pip install --target \"\$DEPS_DIR\" --no-deps geoopt
-    python -m pip install --target \"\$DEPS_DIR\" pyyaml mne antropy imbalanced-learn xgboost
+    # EEGPT training does not need geoopt; edf_loader needs mne. --no-deps avoids a second
+    # numpy/sklearn in \$DEPS_DIR (would break the image's pandas/numpy ABI).
+    python -m pip install --target \"\$DEPS_DIR\" --no-deps mne
     export PYTHONPATH=\"\$DEPS_DIR:\${PYTHONPATH:-}\"
 
     python - <<'PY'
