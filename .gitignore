@@ -11,6 +11,10 @@ __pycache__/
 venv/
 env/
 
+# SLURM: pip --target installs (do not commit)
+.slurm_job_deps/
+.pip_tmp/
+
 # OS / editor
 .DS_Store
 .idea/

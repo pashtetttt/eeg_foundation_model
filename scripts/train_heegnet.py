@@ -9,8 +9,11 @@ except ModuleNotFoundError:
     from scripts._bootstrap import *  # noqa: F401,F403
 
 import argparse
+import csv
+import json
 import random
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -74,6 +77,18 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--no-domain-adaptation", action="store_true", default=bool(cfg.get("no_domain_adaptation", False)), help="Disable domain-specific BN.")
     ap.add_argument("--seed", type=int, default=cfg.get("seed", 42))
     ap.add_argument("--device", type=str, default=cfg.get("device", "cuda"), choices=["cuda", "cpu"])
+    ap.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="Directory for metrics CSV, checkpoint, and test summary. Default: results/heegnet_runs/<timestamp>_<task>.",
+    )
+    ap.add_argument(
+        "--run-name",
+        type=str,
+        default=None,
+        help="Optional tag appended to the default output directory name.",
+    )
     return ap.parse_args()
 
 
@@ -85,6 +100,37 @@ def _make_domain_labels(paths: list[Path]) -> np.ndarray:
     """
     tags = [p.parent.name for p in paths]
     return LabelEncoder().fit_transform(tags)
+
+
+def _records_per_epoch(records: list[dict]) -> list[dict]:
+    """Trainer logs trn and val as separate dicts per epoch; merge into one row per epoch."""
+    merged: dict[int, dict] = {}
+    order: list[int] = []
+    for rec in records:
+        ep = rec.get("epoch")
+        if ep is None:
+            continue
+        if ep not in merged:
+            merged[ep] = {"epoch": int(ep)}
+            order.append(int(ep))
+        merged[ep].update(rec)
+    return [merged[ep] for ep in order]
+
+
+def _write_metrics_csv(path: Path, rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not rows:
+        path.write_text("epoch\n", encoding="utf-8")
+        return
+    keys = sorted({k for r in rows for k in r.keys()}, key=lambda k: (k != "epoch", k))
+    if "epoch" in keys:
+        keys.remove("epoch")
+        keys = ["epoch"] + keys
+    with path.open("w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=keys, extrasaction="ignore")
+        w.writeheader()
+        for r in rows:
+            w.writerow({k: r.get(k, "") for k in keys})
 
 
 def _prepare_splits(
@@ -112,6 +158,14 @@ def main() -> None:
     torch.manual_seed(args.seed)
 
     repo_root = Path(__file__).resolve().parents[1]
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out_default = repo_root / "results" / "heegnet_runs" / f"heegnet_{stamp}_{args.task}"
+    if args.run_name:
+        out_default = out_default.parent / f"{out_default.name}_{args.run_name}"
+    output_dir = args.output_dir if args.output_dir is not None else out_default
+    output_dir = output_dir.resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Artifacts directory: {output_dir}")
     _ensure_heegnet_importable(repo_root)
 
     from nets.callbacks import EarlyStopping, MomentumBatchNormScheduler  # type: ignore
@@ -231,9 +285,35 @@ def main() -> None:
     )
     trainer.fit(model, train_dataloader=loader_train, val_dataloader=loader_val)
 
+    history_rows = _records_per_epoch(trainer.records)
+    metrics_csv = output_dir / "metrics_per_epoch.csv"
+    _write_metrics_csv(metrics_csv, history_rows)
+    print(f"Wrote training history: {metrics_csv}")
+
+    ckpt_path = output_dir / "heegnet_best.pt"
+    meta = {
+        "best_epoch": int(es.best_epoch),
+        "early_stop_metric": "val_loss",
+        "task": args.task,
+        "class_names": list(class_names),
+        "n_classes": int(n_classes),
+        "chunk_size": int(X.shape[2]),
+        "num_electrodes": int(X.shape[1]),
+        "domain_ids": torch.unique(d_t).cpu().tolist(),
+        "seed": int(args.seed),
+        "config_path": str(args.config) if args.config else None,
+        "no_domain_adaptation": bool(args.no_domain_adaptation),
+    }
+    torch.save({"state_dict": model.state_dict(), "meta": meta}, ckpt_path)
+    print(f"Wrote checkpoint (early-stopping best weights): {ckpt_path}")
+
     print(f"Best epoch (ES): {es.best_epoch}")
     test_res = trainer.test(model, dataloader=loader_test)
     print(f"Test metrics: {test_res}")
+
+    test_json = output_dir / "test_metrics.json"
+    test_json.write_text(json.dumps({"metrics": test_res, "meta": meta}, indent=2), encoding="utf-8")
+    print(f"Wrote test summary: {test_json}")
 
     # Detailed test report
     model.eval()
@@ -247,6 +327,15 @@ def main() -> None:
     yp = y_pred.detach().cpu().numpy()
     print(classification_report(yt, yp, target_names=class_names, zero_division=0))
     print(confusion_matrix(yt, yp))
+
+    readme = output_dir / "README_plot.txt"
+    readme.write_text(
+        f"metrics_per_epoch.csv — one row per epoch (train + val columns).\n"
+        f"heegnet_best.pt — state_dict + meta (best early-stopping weights).\n\n"
+        f"Plot learning curves (from repo root):\n"
+        f'  python scripts/plot_heegnet_curves.py --metrics-csv "{metrics_csv}"\n',
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":

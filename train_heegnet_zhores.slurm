@@ -72,9 +72,12 @@ import torch
 print('After job deps (expect CUDA=True if driver matches container):', torch.cuda.is_available())
 PY
 
+    OUT_RUN=\$(pwd)/results/heegnet_slurm_\${SLURM_JOB_ID:-local}
+    mkdir -p \"\$OUT_RUN\"
     python scripts/train_heegnet.py \
       --config configs/heegnet_age4.yaml \
       --data-dir ${DATA_DIR_CONT} \
-      --device cuda
+      --device cuda \
+      --output-dir \"\$OUT_RUN\"
   "
 
