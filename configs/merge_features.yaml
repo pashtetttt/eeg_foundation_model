@@ -1,0 +1,11 @@
+data_dir: data
+cohort_name: default_cohort
+eyes_condition: closed
+results_dir: results
+
+# Must match the embeddings file you want to join (eegpt | heegnet).
+embedding_model: eegpt
+
+# Fraction of subjects (stratified by label) used to fit StandardScalers only.
+scaler_fit_train_fraction: 0.8
+seed: 42

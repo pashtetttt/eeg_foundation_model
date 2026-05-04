@@ -1,0 +1,26 @@
+data_dir: data
+cohort_name: default_cohort
+eyes_condition: closed
+results_dir: results
+
+# Must match merge_features / extract_embeddings embedding_model.
+embedding_model: eegpt
+
+features:
+  use_handcrafted: true
+  use_dfa: true
+  use_embeddings: true
+
+train:
+  test_size: 0.2
+  random_state: 42
+  xgb_n_estimators: 300
+  xgb_max_depth: 8
+  xgb_learning_rate: 0.05
+  xgb_subsample: 0.9
+  xgb_colsample_bytree: 0.85
+  xgb_reg_lambda: 1.0
+
+output:
+  importance_plot: results/classification/xgb_importance_by_source.png
+  metrics_json: results/classification/xgb_metrics.json

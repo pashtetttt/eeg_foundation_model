@@ -1,0 +1,21 @@
+data_dir: data
+cohort_name: default_cohort
+eyes_condition: closed
+max_per_group: null
+results_dir: results
+
+# Relative to results_dir: subject_mapping_{eyes_condition}_{cohort_name}.csv after compute_all_features.
+# subject_mapping_csv: features/subject_mapping_closed_default_cohort.csv
+
+# heegnet | eegpt
+model: heegnet
+
+# Paths relative to repo root unless absolute
+eegpt_checkpoint: EEGPT_files/checkpoint/eegpt_mcae_58chs_4s_large4E.ckpt
+heegnet_checkpoint: null
+
+target_sfreq: 256.0
+window_seconds: 4.0
+batch_size: 64
+device: cuda
+seed: 42

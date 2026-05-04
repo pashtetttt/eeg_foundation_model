@@ -1,0 +1,18 @@
+# Used by run_feature_pipeline_zhores.slurm — EEGPT-only so no HEEGNet checkpoint is required.
+# For HEEGNet embeddings, copy embedding_extraction.yaml, set model: heegnet and heegnet_checkpoint.
+
+data_dir: data
+cohort_name: default_cohort
+eyes_condition: closed
+max_per_group: null
+results_dir: results
+
+model: eegpt
+eegpt_checkpoint: EEGPT_files/checkpoint/eegpt_mcae_58chs_4s_large4E.ckpt
+heegnet_checkpoint: null
+
+target_sfreq: 256.0
+window_seconds: 4.0
+batch_size: 16
+device: cuda
+seed: 42

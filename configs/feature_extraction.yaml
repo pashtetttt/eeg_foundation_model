@@ -1,0 +1,18 @@
+# Root directory containing class subfolders (e.g. preschooler/, primary/, …).
+# Swap this path to switch cohorts — never hardcode "healthy" / "patients" in code.
+data_dir: data
+
+# Tag for output filenames only (e.g. healthy, patients_kids).
+cohort_name: default_cohort
+
+eyes_condition: closed
+max_per_group: null
+include_literature: false
+
+results_dir: results
+
+# DFA (Hardstone-style on band-limited amplitude envelopes)
+dfa_scales: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+dfa_polynomial_order: 1
+
+seed: 42
