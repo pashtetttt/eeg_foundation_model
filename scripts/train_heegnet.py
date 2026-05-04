@@ -169,8 +169,9 @@ def _smote_oversample_train(
         from imblearn.over_sampling import SMOTE  # type: ignore[import-untyped]
     except ImportError as e:
         raise ImportError(
-            "sampling_method=smote requires imbalanced-learn. "
-            "Install with: pip install imbalanced-learn"
+            "sampling_method=smote requires imbalanced-learn compatible with your scikit-learn. "
+            "Install e.g. pip install 'imbalanced-learn==0.11.0' (matches NGC/old sklearn; "
+            "avoid 0.12+ which needs sklearn.utils._metadata_requests). See train_heegnet_zhores.slurm."
         ) from e
 
     y_int = y_train.astype(np.int64, copy=False)

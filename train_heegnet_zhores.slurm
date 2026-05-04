@@ -65,7 +65,9 @@ PY
     # HEEGNet nets import geoopt; edf_loader imports mne.
     python -m pip install --target \"\$DEPS_DIR\" --no-deps geoopt
     python -m pip install --target \"\$DEPS_DIR\" --no-deps mne
-    python -m pip install --target \"\$DEPS_DIR\" --no-deps imbalanced-learn
+    # Pin imblearn <0.12: newer releases import sklearn.utils._metadata_requests (sklearn 1.3+),
+    # which is missing on many NGC PyTorch images' system sklearn.
+    python -m pip install --target \"\$DEPS_DIR\" --no-deps imbalanced-learn==0.11.0
     export PYTHONPATH=\"\$DEPS_DIR:\${PYTHONPATH:-}\"
 
     python - <<'PY'

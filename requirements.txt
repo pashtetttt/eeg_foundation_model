@@ -4,5 +4,6 @@ scipy
 scikit-learn
 mne
 xgboost>=2.0
-imbalanced-learn
+# 0.12+ expects newer sklearn (e.g. sklearn.utils._metadata_requests); NGC images often lag.
+imbalanced-learn>=0.10.1,<0.12
 antropy
