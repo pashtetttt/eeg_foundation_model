@@ -19,3 +19,6 @@ input_align: false
 no_domain_adaptation: false
 seed: 42
 device: cuda
+# Training-set resampling: "none" | "smote" (imblearn SMOTE on flattened EEG windows).
+sampling_method: "smote"
+smote_k_neighbors: 5

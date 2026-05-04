@@ -65,6 +65,7 @@ PY
     # HEEGNet nets import geoopt; edf_loader imports mne.
     python -m pip install --target \"\$DEPS_DIR\" --no-deps geoopt
     python -m pip install --target \"\$DEPS_DIR\" --no-deps mne
+    python -m pip install --target \"\$DEPS_DIR\" --no-deps imbalanced-learn
     export PYTHONPATH=\"\$DEPS_DIR:\${PYTHONPATH:-}\"
 
     python - <<'PY'

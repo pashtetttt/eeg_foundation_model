@@ -21,6 +21,7 @@ import torch
 import yaml
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import LabelEncoder
 
 from eeg_thesis.eegpt_adapter import DEFAULT_19_CH
@@ -75,6 +76,23 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--test-size", type=float, default=cfg.get("test_size", 0.2))
     ap.add_argument("--input-align", action="store_true", default=bool(cfg.get("input_align", False)), help="Use per-domain Euler alignment.")
     ap.add_argument("--no-domain-adaptation", action="store_true", default=bool(cfg.get("no_domain_adaptation", False)), help="Disable domain-specific BN.")
+    _sm = cfg.get("sampling_method", "none")
+    if _sm is None:
+        _sm = "none"
+    ap.add_argument(
+        "--sampling-method",
+        type=str,
+        default=str(_sm).lower().strip(),
+        choices=["none", "smote"],
+        help="Train-only resampling: none (default) or smote (flatten C×T, imblearn SMOTE). From config key sampling_method.",
+    )
+    _kn = cfg.get("smote_k_neighbors", 5)
+    ap.add_argument(
+        "--smote-k-neighbors",
+        type=int,
+        default=int(5 if _kn is None else _kn),
+        help="SMOTE k_neighbors (capped by minority count − 1). Config: smote_k_neighbors.",
+    )
     ap.add_argument("--seed", type=int, default=cfg.get("seed", 42))
     ap.add_argument("--device", type=str, default=cfg.get("device", "cuda"), choices=["cuda", "cpu"])
     ap.add_argument(
@@ -131,6 +149,54 @@ def _write_metrics_csv(path: Path, rows: list[dict]) -> None:
         w.writeheader()
         for r in rows:
             w.writerow({k: r.get(k, "") for k in keys})
+
+
+def _smote_oversample_train(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    domains_train: np.ndarray,
+    *,
+    k_neighbors: int,
+    seed: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Oversample the training set with SMOTE on flattened windows (N, C*T).
+
+    Synthetic rows get the domain label of their nearest neighbor in the original
+    training set (same feature space), so domain-specific BN stays consistent.
+    """
+    try:
+        from imblearn.over_sampling import SMOTE  # type: ignore[import-untyped]
+    except ImportError as e:
+        raise ImportError(
+            "sampling_method=smote requires imbalanced-learn. "
+            "Install with: pip install imbalanced-learn"
+        ) from e
+
+    y_int = y_train.astype(np.int64, copy=False)
+    counts = np.bincount(y_int, minlength=int(y_int.max()) + 1)
+    pos = counts[counts > 0]
+    min_count = int(pos.min()) if len(pos) else 0
+    k_eff = min(int(k_neighbors), min_count - 1)
+    if k_eff < 1:
+        print(
+            f"Warning: SMOTE skipped (smallest class count {min_count}, "
+            f"need >= k_neighbors+1 for k_neighbors={k_neighbors}). Using original train set."
+        )
+        return X_train, y_train, domains_train
+
+    flat = X_train.reshape(len(X_train), -1)
+    sm = SMOTE(random_state=seed, k_neighbors=k_eff)
+    flat_new, y_new = sm.fit_resample(flat, y_int)
+    X_new = flat_new.reshape(-1, X_train.shape[1], X_train.shape[2]).astype(np.float64, copy=False)
+    y_new = y_new.astype(np.int64, copy=False)
+
+    nn = NearestNeighbors(n_neighbors=1, algorithm="ball_tree")
+    nn.fit(flat)
+    neigh_idx = nn.kneighbors(flat_new, return_distance=False)[:, 0]
+    dom_new = domains_train[neigh_idx].astype(np.int64, copy=False)
+
+    return X_new, y_new, dom_new
 
 
 def _prepare_splits(
@@ -207,24 +273,46 @@ def main() -> None:
     n_classes = len(np.unique(y))
     print(f"Task={args.task} classes={class_names} n_classes={n_classes}")
     print(f"Samples={len(y)} shape={X.shape} domains={len(np.unique(domains))}")
+    print(f"Sampling method (train only): {args.sampling_method}")
 
     train_idx, val_idx, test_idx = _prepare_splits(
         X, y, domains, args.test_size, args.validation_size, args.seed
     )
 
+    X_train_np = X[train_idx]
+    y_train_np = y[train_idx].astype(np.int64, copy=False)
+    dom_train_np = domains[train_idx].astype(np.int64, copy=False)
+
+    if args.sampling_method == "smote":
+        print("Applying SMOTE on training split only (flattened C×T features).")
+        print("Train class counts (before SMOTE):", {class_names[i]: int((y_train_np == i).sum()) for i in range(n_classes)})
+        X_train_np, y_train_np, dom_train_np = _smote_oversample_train(
+            X_train_np,
+            y_train_np,
+            dom_train_np,
+            k_neighbors=args.smote_k_neighbors,
+            seed=args.seed,
+        )
+        print("Train class counts (after SMOTE):", {class_names[i]: int((y_train_np == i).sum()) for i in range(n_classes)})
+        print(f"Train size after SMOTE: {len(y_train_np)} (was {len(train_idx)})")
+
     X_t = torch.from_numpy(X)
     y_t = torch.from_numpy(y.astype(np.int64))
     d_t = torch.from_numpy(domains.astype(np.int64))
 
-    ds_train = DomainDataset(X_t[train_idx], y_t[train_idx], d_t[train_idx])
+    ds_train = DomainDataset(
+        torch.from_numpy(X_train_np),
+        torch.from_numpy(y_train_np),
+        torch.from_numpy(dom_train_np),
+    )
     ds_val = DomainDataset(X_t[val_idx], y_t[val_idx], d_t[val_idx])
     ds_test = DomainDataset(X_t[test_idx], y_t[test_idx], d_t[test_idx])
 
-    train_domains = d_t[train_idx].detach().cpu().numpy()
+    train_domains = dom_train_np
     _, per_domain_counts = np.unique(train_domains, return_counts=True)
     can_use_domain_loader = len(per_domain_counts) > 0 and int(per_domain_counts.min()) >= 2
     if can_use_domain_loader:
-        domains_per_batch = min(args.domains_per_batch, len(torch.unique(d_t[train_idx])))
+        domains_per_batch = min(args.domains_per_batch, len(np.unique(train_domains)))
         loader_train = StratifiedDomainDataLoader(
             ds_train,
             args.batch_size,
@@ -303,6 +391,8 @@ def main() -> None:
         "seed": int(args.seed),
         "config_path": str(args.config) if args.config else None,
         "no_domain_adaptation": bool(args.no_domain_adaptation),
+        "sampling_method": str(args.sampling_method),
+        "smote_k_neighbors": int(args.smote_k_neighbors),
     }
     torch.save({"state_dict": model.state_dict(), "meta": meta}, ckpt_path)
     print(f"Wrote checkpoint (early-stopping best weights): {ckpt_path}")
