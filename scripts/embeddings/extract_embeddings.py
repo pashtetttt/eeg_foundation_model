@@ -4,7 +4,7 @@ Extract frozen foundation-model embeddings for each recording listed in subject_
 
 Outputs:
   results/embeddings/embeddings_{model}_{condition}_{cohort_name}.npz
-    arrays: embeddings (N, D), subject_ids (object), y (int64, optional)
+    arrays: embeddings (N, D), subject_ids (unicode), y (int64, optional)
 
 Can be imported: ``from scripts.embeddings.extract_embeddings import load_window_tensor``.
 """
@@ -197,7 +197,8 @@ def main() -> None:
 
     E = np.stack(vecs, axis=0).astype(np.float32)
     y_arr = np.asarray(ys, dtype=np.int64)
-    sid = np.asarray(ids, dtype=object)
+    # Save as plain unicode array to avoid NumPy pickle restrictions on load.
+    sid = np.asarray(ids, dtype=str)
     np.savez_compressed(out_npz, embeddings=E, subject_ids=sid, y=y_arr)
     print(f"Saved {out_npz} shape={E.shape}")
 

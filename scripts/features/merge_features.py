@@ -62,7 +62,13 @@ def main() -> None:
 
     Xf = np.load(feat_path)
     map_df = pd.read_csv(map_path)
-    emb = np.load(emb_path)
+    # Backward compatible:
+    # - new embeddings files store subject_ids as unicode (no pickle needed)
+    # - older files may have dtype=object and require allow_pickle=True
+    try:
+        emb = np.load(emb_path)
+    except ValueError:
+        emb = np.load(emb_path, allow_pickle=True)
     E = emb["embeddings"]
     sid_emb = [str(s) for s in emb["subject_ids"]]
     emb_dict = {s: E[i] for i, s in enumerate(sid_emb)}
@@ -85,7 +91,7 @@ def main() -> None:
 
     X_h = Xf[rows_keep]
     y = map_df["y"].values[rows_keep] if "y" in map_df.columns else map_df["label_idx"].values[rows_keep]
-    subj = np.asarray([sid_feat[i] for i in rows_keep], dtype=object)
+    subj = np.asarray([sid_feat[i] for i in rows_keep], dtype=str)
     X_e = np.stack([emb_dict[str(sid_feat[i])] for i in rows_keep], axis=0)
 
     meta = pd.read_csv(meta_path)
