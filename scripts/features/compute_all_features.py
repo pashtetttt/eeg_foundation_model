@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -83,7 +84,12 @@ def main() -> None:
     dfa_scales = cfg.get("dfa_scales")
     if dfa_scales is None:
         dfa_scales = list(range(1, 21))
+    dfa_scales_unit = str(cfg.get("dfa_scales_unit", "seconds")).lower().strip()
+    if dfa_scales_unit not in {"samples", "seconds"}:
+        raise ValueError(f"dfa_scales_unit must be 'samples' or 'seconds', got {dfa_scales_unit!r}")
     dfa_poly = int(cfg.get("dfa_polynomial_order", 1))
+    dfa_max_samples = cfg.get("dfa_max_samples")
+    dfa_max_samples = int(dfa_max_samples) if dfa_max_samples is not None else None
 
     out_npy = features_cache_path(results_dir, condition=condition, cohort_name=cohort_name)
     out_npy.parent.mkdir(parents=True, exist_ok=True)
@@ -99,6 +105,7 @@ def main() -> None:
     )
     if not manifest:
         raise FileNotFoundError(f"No recordings found under {data_dir}")
+    print(f"DFA scales interpreted as {dfa_scales_unit}: {dfa_scales}")
 
     X_rows: list[np.ndarray] = []
     y_list: list[int] = []
@@ -106,12 +113,15 @@ def main() -> None:
     canonical_ch_names: list[str] | None = None
     dfa_names: list[str] = []
 
-    for row in manifest:
+    total = len(manifest)
+    t0 = time.perf_counter()
+    for idx, row in enumerate(manifest, start=1):
         try:
             raw = load_raw_edf_resilient(row.edf_path, preload=True, verbose=False)
             if not np.all(np.isfinite(raw.get_data())):
                 raise ValueError("non-finite raw")
 
+            t_h0 = time.perf_counter()
             out = extract_all_features(
                 raw,
                 canonical_ch_names,
@@ -123,15 +133,24 @@ def main() -> None:
             else:
                 handcrafted = out  # type: ignore[assignment]
             handcrafted = np.asarray(handcrafted, dtype=float).ravel()
+            t_h = time.perf_counter() - t_h0
 
             data_19, _ = _eeg_data_19(raw, canonical_ch_names)
+            if dfa_max_samples is not None and dfa_max_samples > 0 and data_19.shape[1] > dfa_max_samples:
+                data_19 = data_19[:, :dfa_max_samples]
             sfreq = float(raw.info["sfreq"])
+            if dfa_scales_unit == "seconds":
+                dfa_scales_cur = [max(4, int(round(float(s) * sfreq))) for s in dfa_scales]
+            else:
+                dfa_scales_cur = [int(s) for s in dfa_scales]
+            t_d0 = time.perf_counter()
             dfa_vec, dfa_names = compute_dfa_feature_block(
                 data_19,
                 sfreq,
-                scales=dfa_scales,
+                scales=dfa_scales_cur,
                 poly_order=dfa_poly,
             )
+            t_d = time.perf_counter() - t_d0
 
             feat = np.concatenate([handcrafted, dfa_vec]).astype(np.float32)
             X_rows.append(feat)
@@ -145,6 +164,16 @@ def main() -> None:
                     "group_folder": row.group_folder,
                 }
             )
+            if idx % 20 == 0 or idx == total:
+                elapsed = time.perf_counter() - t0
+                rate = idx / max(elapsed, 1e-9)
+                eta = (total - idx) / max(rate, 1e-9)
+                print(
+                    f"[compute_all_features] {idx}/{total} "
+                    f"elapsed={elapsed/60:.1f}m eta={eta/60:.1f}m "
+                    f"ok={len(X_rows)} skipped={idx-len(X_rows)} "
+                    f"last_handcrafted={t_h:.2f}s last_dfa={t_d:.2f}s"
+                )
         except Exception as e:
             print(f"  skip {row.subject_id}: {e}")
 

@@ -1,0 +1,2 @@
+# SLURM must use LF only (sbatch rejects CRLF).
+*.slurm text eol=lf

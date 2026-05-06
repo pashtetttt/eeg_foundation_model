@@ -26,6 +26,7 @@ from typing import Iterable
 
 import numpy as np
 from scipy.signal import butter, filtfilt, hilbert
+from scipy.signal import detrend as signal_detrend
 
 
 def bandpass_envelope(
@@ -99,16 +100,24 @@ def dfa_exponent(
         nseg = len(y) // n
         if nseg < min_segments:
             continue
-        fluct = []
-        for k in range(nseg):
-            seg = y[k * n : (k + 1) * n]
+        segs = y[: nseg * n].reshape(nseg, n)
+        # Fast path for Hardstone-style DFA-1 (linear detrending): vectorized detrend.
+        # This avoids per-segment np.polyfit calls, which are very slow on long signals.
+        if poly_order == 1:
+            resid = signal_detrend(segs, axis=1, type="linear")
+            mse = np.mean(resid * resid, axis=1)
+            f_n = float(np.sqrt(np.mean(mse)))
+        else:
+            fluct = []
             t = np.arange(n, dtype=float)
-            coeffs = np.polyfit(t, seg, deg=poly_order)
-            fit = np.polyval(coeffs, t)
-            fluct.append(np.mean((seg - fit) ** 2))
-        if not fluct:
-            continue
-        f_n = float(np.sqrt(np.mean(fluct)))
+            for k in range(nseg):
+                seg = segs[k]
+                coeffs = np.polyfit(t, seg, deg=poly_order)
+                fit = np.polyval(coeffs, t)
+                fluct.append(np.mean((seg - fit) ** 2))
+            if not fluct:
+                continue
+            f_n = float(np.sqrt(np.mean(fluct)))
         if f_n <= 0:
             continue
         log_n.append(np.log10(float(n)))
@@ -173,9 +182,12 @@ def compute_dfa_feature_block(
     names: list[str] = []
 
     for band_name, (lo, hi) in bands_hz.items():
+        # Compute envelopes once per channel, then reuse for both per-channel and per-region DFA.
+        # This avoids repeated filtering/Hilbert calls and cuts DFA wall time significantly.
+        env_by_ch = [bandpass_envelope(data_ct[ch], sfreq, lo, hi) for ch in range(n_ch)]
+
         ch_alphas: list[float] = []
-        for ch in range(n_ch):
-            env = bandpass_envelope(data_ct[ch], sfreq, lo, hi)
+        for ch, env in enumerate(env_by_ch):
             a = dfa_exponent(env, scales_arr, poly_order=poly_order)
             ch_alphas.append(float(a) if np.isfinite(a) else 0.0)
             names.append(f"dfa_{band_name}_ch{ch}")
@@ -187,7 +199,7 @@ def compute_dfa_feature_block(
                 vec.append(0.0)
                 names.append(f"dfa_{band_name}_region_{reg_name}")
                 continue
-            reg_env = np.mean([bandpass_envelope(data_ct[i], sfreq, lo, hi) for i in idxs], axis=0)
+            reg_env = np.mean([env_by_ch[i] for i in idxs], axis=0)
             a_r = dfa_exponent(reg_env, scales_arr, poly_order=poly_order)
             vec.append(float(a_r) if np.isfinite(a_r) else 0.0)
             names.append(f"dfa_{band_name}_region_{reg_name}")

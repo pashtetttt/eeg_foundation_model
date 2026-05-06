@@ -13,6 +13,11 @@ results_dir: results
 
 # DFA (Hardstone-style on band-limited amplitude envelopes)
 dfa_scales: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+# Unit for dfa_scales: "seconds" (recommended) or "samples".
+dfa_scales_unit: seconds
 dfa_polynomial_order: 1
+# Runtime guard for long EDFs: limit DFA to first N samples per channel.
+# 5000 is consistent with existing time-domain feature extraction caps in eeg_features.py.
+dfa_max_samples: 5000
 
 seed: 42
