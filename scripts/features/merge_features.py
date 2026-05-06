@@ -65,12 +65,14 @@ def main() -> None:
     # Backward compatible:
     # - new embeddings files store subject_ids as unicode (no pickle needed)
     # - older files may have dtype=object and require allow_pickle=True
+    emb = np.load(emb_path)
+    E = emb["embeddings"]
     try:
-        emb = np.load(emb_path)
+        sid_raw = emb["subject_ids"]
     except ValueError:
         emb = np.load(emb_path, allow_pickle=True)
-    E = emb["embeddings"]
-    sid_emb = [str(s) for s in emb["subject_ids"]]
+        sid_raw = emb["subject_ids"]
+    sid_emb = [str(s) for s in sid_raw]
     emb_dict = {s: E[i] for i, s in enumerate(sid_emb)}
 
     sid_feat = map_df["subject_id"].astype(str).tolist()
