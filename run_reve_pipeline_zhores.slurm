@@ -47,23 +47,6 @@ import torch
 print('torch:', torch.__version__, 'cuda:', torch.cuda.is_available())
 PY
 
-    export TMPDIR=\$(pwd)/.pip_tmp
-    DEPS_DIR=\$(pwd)/.slurm_job_deps
-    rm -rf \"\$TMPDIR\" \"\$DEPS_DIR\"
-    mkdir -p \"\$TMPDIR\" \"\$DEPS_DIR\"
-
-    # Runtime deps for this REVE pipeline.
-    python -m pip install --target \"\$DEPS_DIR\" --no-deps mne
-    python -m pip install --target \"\$DEPS_DIR\" --no-deps joblib
-    # For REVE/HF stack, install with dependencies to avoid missing transitive imports
-    # (e.g. httpcore/httpx required by huggingface_hub).
-    python -m pip install --target \"\$DEPS_DIR\" --upgrade \
-      einops \
-      transformers==4.56.2 \
-      huggingface_hub \
-      safetensors
-    export PYTHONPATH=\"\$DEPS_DIR:\${PYTHONPATH:-}\"
-
     OUT=\$(pwd)/results/reve_pipeline_slurm_\${SLURM_JOB_ID:-local}
     mkdir -p \"\$OUT\"
     echo \"Pipeline log dir: \$OUT\"
@@ -71,6 +54,36 @@ PY
 
     echo '=== 1/3 compute_all_features (for subject mapping cache) ===' | tee -a \"\$OUT/pipeline.log\"
     python scripts/features/compute_all_features.py --config ${CFG_FEATURES} | tee -a \"\$OUT/pipeline.log\"
+
+    export TMPDIR=\$(pwd)/.pip_tmp
+    DEPS_DIR=\$(pwd)/.slurm_job_deps
+    rm -rf \"\$TMPDIR\" \"\$DEPS_DIR\"
+    mkdir -p \"\$TMPDIR\" \"\$DEPS_DIR\"
+
+    # Install REVE/HF runtime deps WITHOUT pulling a new numpy/scipy stack into DEPS_DIR.
+    # This avoids pandas<->numpy ABI mismatch with the NGC image.
+    python -m pip install --target \"\$DEPS_DIR\" --no-deps mne
+    python -m pip install --target \"\$DEPS_DIR\" --no-deps joblib
+    python -m pip install --target \"\$DEPS_DIR\" --no-deps \
+      einops \
+      transformers==4.56.2 \
+      huggingface_hub \
+      safetensors \
+      httpx \
+      httpcore \
+      anyio \
+      h11 \
+      sniffio \
+      typing_extensions \
+      filelock \
+      pyyaml \
+      requests \
+      tqdm \
+      packaging \
+      fsspec \
+      regex \
+      tokenizers
+    export PYTHONPATH=\"\$DEPS_DIR:\${PYTHONPATH:-}\"
 
     echo '=== 2/3 extract_reve_embeddings ===' | tee -a \"\$OUT/pipeline.log\"
     python scripts/embeddings/extract_reve_embeddings.py --config ${CFG_REVE_EMB} | tee -a \"\$OUT/pipeline.log\"
