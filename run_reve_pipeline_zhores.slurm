@@ -57,7 +57,7 @@ PY
     DEPS_DIR=\$(pwd)/.slurm_job_deps
     rm -rf \"\$TMPDIR\" \"\$DEPS_DIR\"
     mkdir -p \"\$TMPDIR\" \"\$DEPS_DIR\"
-    python -m pip install --target \"\$DEPS_DIR\" --no-deps mne
+    python -m pip install --target \"\$DEPS_DIR\" --no-deps --upgrade mne
     export PYTHONPATH=\"\$DEPS_DIR:\${PYTHONPATH:-}\"
 
     echo '=== 1/3 compute_all_features (for subject mapping cache) ===' | tee -a \"\$OUT/pipeline.log\"
@@ -70,9 +70,9 @@ PY
 
     # Install REVE/HF runtime deps WITHOUT pulling a new numpy/scipy stack into DEPS_DIR.
     # This avoids pandas<->numpy ABI mismatch with the NGC image.
-    python -m pip install --target \"\$DEPS_DIR\" --no-deps mne
-    python -m pip install --target \"\$DEPS_DIR\" --no-deps joblib
-    python -m pip install --target \"\$DEPS_DIR\" --no-deps \
+    python -m pip install --target \"\$DEPS_DIR\" --no-deps --upgrade mne
+    python -m pip install --target \"\$DEPS_DIR\" --no-deps --upgrade joblib
+    python -m pip install --target \"\$DEPS_DIR\" --no-deps --upgrade \
       einops \
       transformers==4.56.2 \
       huggingface_hub \
@@ -90,7 +90,7 @@ PY
       packaging \
       fsspec \
       regex \
-      tokenizers
+      tokenizers==0.23.0
     export PYTHONPATH=\"\$DEPS_DIR:\${PYTHONPATH:-}\"
 
     echo '=== 2/3 extract_reve_embeddings ===' | tee -a \"\$OUT/pipeline.log\"
