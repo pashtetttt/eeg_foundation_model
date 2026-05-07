@@ -90,7 +90,7 @@ PY
       packaging \
       fsspec \
       regex \
-      tokenizers==0.23.0
+      tokenizers==0.22.2
     export PYTHONPATH=\"\$DEPS_DIR:\${PYTHONPATH:-}\"
 
     echo '=== 2/3 extract_reve_embeddings ===' | tee -a \"\$OUT/pipeline.log\"
