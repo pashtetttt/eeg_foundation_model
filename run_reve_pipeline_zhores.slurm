@@ -75,7 +75,7 @@ PY
     python -m pip install --target \"\$DEPS_DIR\" --no-deps --upgrade \
       einops \
       transformers==4.56.2 \
-      huggingface_hub \
+      "huggingface_hub>=0.34.0,<1.0" \
       safetensors \
       httpx \
       httpcore \
