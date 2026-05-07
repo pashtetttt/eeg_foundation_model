@@ -4,3 +4,6 @@
 [submodule "heegnet/HEEGNet"]
 	path = heegnet/HEEGNet
 	url = https://github.com/pashtetttt/HEEGNet.git
+[submodule "reve/reve_eeg"]
+	path = reve/reve_eeg
+	url = https://github.com/elouayas/reve_eeg.git
