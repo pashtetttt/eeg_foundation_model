@@ -55,9 +55,13 @@ PY
     # Runtime deps for this REVE pipeline.
     python -m pip install --target \"\$DEPS_DIR\" --no-deps mne
     python -m pip install --target \"\$DEPS_DIR\" --no-deps joblib
-    python -m pip install --target \"\$DEPS_DIR\" --no-deps einops
-    python -m pip install --target \"\$DEPS_DIR\" --no-deps transformers==4.56.2
-    python -m pip install --target \"\$DEPS_DIR\" --no-deps huggingface_hub safetensors
+    # For REVE/HF stack, install with dependencies to avoid missing transitive imports
+    # (e.g. httpcore/httpx required by huggingface_hub).
+    python -m pip install --target \"\$DEPS_DIR\" --upgrade \
+      einops \
+      transformers==4.56.2 \
+      huggingface_hub \
+      safetensors
     export PYTHONPATH=\"\$DEPS_DIR:\${PYTHONPATH:-}\"
 
     OUT=\$(pwd)/results/reve_pipeline_slurm_\${SLURM_JOB_ID:-local}
