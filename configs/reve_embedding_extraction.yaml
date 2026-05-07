@@ -1,0 +1,26 @@
+data_dir: data
+cohort_name: default_cohort
+eyes_condition: closed
+results_dir: results
+
+# Optional; defaults to features/subject_mapping_{eyes_condition}_{cohort_name}.csv under results_dir.
+# subject_mapping_csv: features/subject_mapping_closed_default_cohort.csv
+
+# REVE model id on Hugging Face Hub (requires access acceptance if gated).
+model_id: brain-bzh/reve-base
+hf_cache_dir: .cache
+
+# REVE preprocessing expectations
+target_sfreq: 200.0
+window_seconds: 5.0
+filter_min_hz: 0.3
+filter_max_hz: 30.0
+notch_hz: 50.0
+
+# window embedding aggregation: token_mean | token_max
+pooling: token_mean
+batch_size: 32
+device: cuda
+max_recordings: null
+
+seed: 42

@@ -9,3 +9,5 @@ imbalanced-learn>=0.10.1,<0.12
 antropy
 joblib
 matplotlib
+einops
+transformers
