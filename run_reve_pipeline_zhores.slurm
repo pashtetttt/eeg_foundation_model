@@ -52,6 +52,14 @@ PY
     echo \"Pipeline log dir: \$OUT\"
     echo \"Started: \$(date -Is)\" | tee \"\$OUT/pipeline.log\"
 
+    # Stage-1 minimal deps (compute_all_features needs mne).
+    export TMPDIR=\$(pwd)/.pip_tmp
+    DEPS_DIR=\$(pwd)/.slurm_job_deps
+    rm -rf \"\$TMPDIR\" \"\$DEPS_DIR\"
+    mkdir -p \"\$TMPDIR\" \"\$DEPS_DIR\"
+    python -m pip install --target \"\$DEPS_DIR\" --no-deps mne
+    export PYTHONPATH=\"\$DEPS_DIR:\${PYTHONPATH:-}\"
+
     echo '=== 1/3 compute_all_features (for subject mapping cache) ===' | tee -a \"\$OUT/pipeline.log\"
     python scripts/features/compute_all_features.py --config ${CFG_FEATURES} | tee -a \"\$OUT/pipeline.log\"
 
