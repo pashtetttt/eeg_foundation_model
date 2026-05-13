@@ -2,12 +2,32 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parents[2]
+_SRC = _ROOT / "src"
+for _p in (_ROOT, _SRC):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
+
+import yaml
 
 from .compute_dfa import compute_dfa_table, save_dfa_rows, save_meta
 from .plots import boxplots_by_age, boxplots_health_within_age, heatmap_significance, trend_plot
 from .stats import analyze_stats, load_dfa_csv, save_stats
+
+
+def _load_dfa_yaml(path: Path | None) -> dict:
+    if path is None or not path.is_file():
+        return {}
+    with path.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"DFA config must be a YAML mapping: {path}")
+    return data
 
 
 def _comment_ru_for_effect(row: dict) -> str:
@@ -55,19 +75,41 @@ def generate_report(*, out_dir: Path, meta: dict, stats_rows: list[dict]) -> Pat
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="DFA analysis pipeline (healthy vs patients, age, regions).")
-    ap.add_argument("--data-dir", type=Path, default=Path("data"))
-    ap.add_argument("--kids-dir", type=Path, default=Path("data_kids"))
-    ap.add_argument("--eyes", type=str, default="open", choices=["open", "closed"])
-    ap.add_argument("--max", type=int, default=None, help="Debug cap per class")
-    ap.add_argument("--order", type=int, default=1, choices=[1, 2], help="Polynomial detrending order")
-    ap.add_argument("--min-scale", type=int, default=4)
-    ap.add_argument("--out-dir", type=Path, default=Path("results/dfa_analysis"))
-    args = ap.parse_args()
+    pre = argparse.ArgumentParser(add_help=False)
+    pre.add_argument("--config", type=Path, default=None, help="YAML (see configs/dfa/default.yml).")
+    pre_args, rest = pre.parse_known_args()
+    ycfg = _load_dfa_yaml(pre_args.config)
 
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    def _i(key: str, fallback: int) -> int:
+        v = ycfg.get(key, fallback)
+        return int(v) if v is not None else fallback
+
+    max_yaml = ycfg.get("max_per_class")
+    max_default = int(max_yaml) if max_yaml is not None else None
+
+    ap = argparse.ArgumentParser(description="DFA analysis pipeline (healthy vs patients, age, regions).")
+    ap.add_argument("--config", type=Path, default=pre_args.config, help="Optional YAML; CLI overrides YAML when passed.")
+    ap.add_argument("--data-dir", type=Path, default=Path(str(ycfg.get("healthy_data_dir", "data"))))
+    ap.add_argument("--kids-dir", type=Path, default=Path(str(ycfg.get("patients_data_dir", "data_kids"))))
+    ap.add_argument("--eyes", type=str, default=str(ycfg.get("eyes", "open")), choices=["open", "closed"])
+    ap.add_argument("--max", type=int, default=max_default, help="Debug cap per class (YAML: max_per_class).")
+    ap.add_argument("--order", type=int, default=_i("order", 1), choices=[1, 2], help="Polynomial detrending order")
+    ap.add_argument("--min-scale", type=int, default=_i("min_scale", 4))
+    ap.add_argument("--out-dir", type=Path, default=Path(str(ycfg.get("out_dir", "results/dfa_analysis"))))
+    ap.add_argument(
+        "--run-name",
+        type=str,
+        default=ycfg.get("run_name") if ycfg.get("run_name") is not None else None,
+        help="Output folder suffix: run_<eyes>_<run_name>. Default: timestamp.",
+    )
+    args = ap.parse_args(rest)
+
+    ts = args.run_name if args.run_name else datetime.now().strftime("%Y%m%d_%H%M%S")
     out_dir = args.out_dir / f"run_{args.eyes}_{ts}"
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.config is not None and args.config.is_file():
+        shutil.copy2(args.config, out_dir / "config_used.yml")
 
     print(f"[dfa] compute healthy ({args.data_dir})…")
     rows_h, meta_h = compute_dfa_table(
@@ -108,6 +150,7 @@ def main() -> None:
 
     print("[dfa] report…")
     generate_report(out_dir=out_dir, meta=meta, stats_rows=stats_rows)
+    print(f"DFA_OUTPUT_DIR={out_dir.resolve()}", flush=True)
     print(f"[dfa] done: {out_dir}")
 
 

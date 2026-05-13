@@ -41,6 +41,7 @@ from scripts.embeddings.model_loader import (
 )
 from scripts.features.feature_utils import embeddings_cache_path
 from scripts.utils.data_handling import load_yaml_config, resolve_data_dir
+from scripts.utils.runtime_diag import log_library_versions
 
 
 def load_window_tensor(
@@ -74,10 +75,25 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Extract frozen FM embeddings for recordings in subject_mapping.")
     ap.add_argument("--config", type=Path, default=ROOT / "configs" / "embedding_extraction.yaml")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--model", type=str, default=None, help="Override config model (eegpt | heegnet).")
+    ap.add_argument("--data-dir", type=Path, default=None, help="Override config data_dir.")
+    ap.add_argument("--condition", type=str, default=None, help="Override eyes_condition.")
+    ap.add_argument("--cohort-name", type=str, default=None, help="Override cohort_name output tag.")
     args = ap.parse_args()
 
     cfg = load_yaml_config(args.config)
-    data_dir = resolve_data_dir(cfg)
+    if args.data_dir is not None:
+        cfg["data_dir"] = str(args.data_dir.expanduser().resolve())
+    if args.condition is not None:
+        cfg["eyes_condition"] = args.condition
+    if args.cohort_name is not None:
+        cfg["cohort_name"] = args.cohort_name
+    if args.model is not None:
+        cfg["model"] = args.model
+
+    log_library_versions("numpy", "pandas", "torch")
+
+    _ = resolve_data_dir(cfg)
     results_dir = Path(cfg.get("results_dir", "results")).resolve()
     condition = str(cfg.get("eyes_condition", "closed"))
     cohort_name = str(cfg.get("cohort_name", "cohort"))

@@ -32,14 +32,30 @@ from scripts.features.feature_utils import (
     merged_cache_path,
 )
 from scripts.utils.data_handling import load_yaml_config, resolve_data_dir
+from scripts.utils.runtime_diag import log_library_versions
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Merge cached features + embeddings.")
     ap.add_argument("--config", type=Path, default=ROOT / "configs" / "merge_features.yaml")
+    ap.add_argument("--data-dir", type=Path, default=None, help="Override config data_dir (for logging consistency).")
+    ap.add_argument("--condition", type=str, default=None, help="Override eyes_condition.")
+    ap.add_argument("--cohort-name", type=str, default=None, help="Override cohort_name.")
+    ap.add_argument("--embedding-model", type=str, default=None, help="Override embedding_model (eegpt | heegnet).")
     args = ap.parse_args()
 
     cfg = load_yaml_config(args.config)
+    if args.data_dir is not None:
+        cfg["data_dir"] = str(args.data_dir.expanduser().resolve())
+    if args.condition is not None:
+        cfg["eyes_condition"] = args.condition
+    if args.cohort_name is not None:
+        cfg["cohort_name"] = args.cohort_name
+    if args.embedding_model is not None:
+        cfg["embedding_model"] = args.embedding_model
+
+    log_library_versions("numpy", "pandas", "sklearn")
+
     _ = resolve_data_dir(cfg)
     results_dir = Path(cfg.get("results_dir", "results")).resolve()
     condition = str(cfg.get("eyes_condition", "closed"))

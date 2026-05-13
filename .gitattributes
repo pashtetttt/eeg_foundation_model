@@ -1,2 +1,3 @@
 # SLURM must use LF only (sbatch rejects CRLF).
 *.slurm text eol=lf
+configs/dfa/*.yml text eol=lf

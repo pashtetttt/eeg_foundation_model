@@ -29,6 +29,30 @@ from sklearn.model_selection import train_test_split
 
 from scripts.features.feature_utils import merged_cache_path
 from scripts.utils.data_handling import load_yaml_config, resolve_data_dir
+from scripts.utils.runtime_diag import log_library_versions
+
+EXPERIMENT_PRESETS: dict[str, dict[str, bool]] = {
+    "handcrafted_only": {
+        "use_handcrafted": True,
+        "use_dfa": False,
+        "use_embeddings": False,
+    },
+    "handcrafted_dfa": {
+        "use_handcrafted": True,
+        "use_dfa": True,
+        "use_embeddings": False,
+    },
+    "handcrafted_embeddings": {
+        "use_handcrafted": True,
+        "use_dfa": False,
+        "use_embeddings": True,
+    },
+    "all_combined": {
+        "use_handcrafted": True,
+        "use_dfa": True,
+        "use_embeddings": True,
+    },
+}
 
 
 def _select_columns(meta: pd.DataFrame, feat_cfg: dict) -> np.ndarray:
@@ -60,14 +84,36 @@ def _coarse_source(s: str) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser(description="XGBoost on merged cached features.")
     ap.add_argument("--config", type=Path, default=ROOT / "configs" / "xgboost_training.yaml")
+    ap.add_argument(
+        "--experiment",
+        type=str,
+        default=None,
+        choices=sorted(EXPERIMENT_PRESETS.keys()),
+        help="Ablations: override features.* toggles (YAML values used if omitted).",
+    )
+    ap.add_argument("--data-dir", type=Path, default=None, help="Override config data_dir.")
+    ap.add_argument("--condition", type=str, default=None, help="Override eyes_condition.")
+    ap.add_argument("--cohort-name", type=str, default=None, help="Override cohort_name.")
     args = ap.parse_args()
 
     cfg = load_yaml_config(args.config)
+    if args.data_dir is not None:
+        cfg["data_dir"] = str(args.data_dir.expanduser().resolve())
+    if args.condition is not None:
+        cfg["eyes_condition"] = args.condition
+    if args.cohort_name is not None:
+        cfg["cohort_name"] = args.cohort_name
+
+    log_library_versions("numpy", "pandas", "sklearn", "xgboost")
+
     _ = resolve_data_dir(cfg)
     results_dir = Path(cfg.get("results_dir", "results")).resolve()
     condition = str(cfg.get("eyes_condition", "closed"))
     cohort_name = str(cfg.get("cohort_name", "cohort"))
-    feat_cfg = cfg.get("features") or {}
+    feat_cfg = dict(cfg.get("features") or {})
+    if args.experiment is not None:
+        feat_cfg.update(EXPERIMENT_PRESETS[args.experiment])
+        print(f"[train_xgboost] experiment={args.experiment} -> features: {feat_cfg}")
     train_cfg = cfg.get("train") or {}
     out_cfg = cfg.get("output") or {}
 

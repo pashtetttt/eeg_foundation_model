@@ -6,6 +6,8 @@ results_dir: results
 # Must match merge_features / extract_embeddings embedding_model.
 embedding_model: eegpt
 
+# Or run: python scripts/classification/train_xgboost.py --experiment handcrafted_only
+# Presets: handcrafted_only | handcrafted_dfa | handcrafted_embeddings | all_combined
 features:
   use_handcrafted: true
   use_dfa: true

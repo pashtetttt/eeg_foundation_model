@@ -34,6 +34,7 @@ from edf_loader import load_raw_edf_resilient
 from scripts.features.dfa_utils import compute_dfa_feature_block
 from scripts.features.feature_utils import features_cache_path, save_subject_mapping_csv
 from scripts.utils.data_handling import build_recording_manifest, load_yaml_config, resolve_data_dir
+from scripts.utils.runtime_diag import log_library_versions
 
 
 def _eeg_data_19(raw: mne.io.BaseRaw, canonical_ch_names: list[str] | None) -> tuple[np.ndarray, list[str]]:
@@ -70,9 +71,36 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Cache handcrafted + DFA features for all EDFs under data_dir.")
     ap.add_argument("--config", type=Path, default=ROOT / "configs" / "feature_extraction.yaml")
     ap.add_argument("--force", action="store_true", help="Recompute even if output .npy exists.")
+    ap.add_argument(
+        "--data-dir",
+        type=Path,
+        default=None,
+        help="Override config data_dir (POSIX path; use instead of editing YAML when switching cohorts).",
+    )
+    ap.add_argument(
+        "--condition",
+        type=str,
+        default=None,
+        help="Override config eyes_condition (e.g. closed, open).",
+    )
+    ap.add_argument(
+        "--cohort-name",
+        type=str,
+        default=None,
+        help="Override config cohort_name (tag used in output filenames).",
+    )
     args = ap.parse_args()
 
     cfg = load_yaml_config(args.config)
+    if args.data_dir is not None:
+        cfg["data_dir"] = str(args.data_dir.expanduser().resolve())
+    if args.condition is not None:
+        cfg["eyes_condition"] = args.condition
+    if args.cohort_name is not None:
+        cfg["cohort_name"] = args.cohort_name
+
+    log_library_versions("numpy", "pandas", "mne")
+
     data_dir = resolve_data_dir(cfg)
     results_dir = Path(cfg.get("results_dir", "results")).resolve()
     condition = str(cfg.get("eyes_condition", "closed"))

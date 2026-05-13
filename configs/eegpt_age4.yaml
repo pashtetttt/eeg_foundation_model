@@ -30,7 +30,11 @@ channels:
   - O2
 
 train:
-  epochs: 10
+  epochs: 50
   batch_size: 16
   lr: 1.0e-4
   device: cpu
+  # Holdout from the training fold for val_loss / early stopping (stratified).
+  val_size: 0.15
+  early_stopping_patience: 8
+  early_stopping_min_epochs: 3

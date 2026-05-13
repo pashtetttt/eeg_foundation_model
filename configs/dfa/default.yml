@@ -1,3 +1,6 @@
+# DFA analysis pipeline (scripts/dfa_analysis/run_pipeline.py)
+# Override paths on Zhores to your GPFS data roots.
+
 workflow: dfa
 healthy_data_dir: data
 patients_data_dir: data_kids
@@ -5,3 +8,9 @@ eyes: closed
 min_scale: 4
 order: 1
 out_dir: results/dfa_analysis
+
+# Optional: cap files per class (null = use all EDFs that match eyes naming).
+max_per_class: null
+
+# Optional: fixed output folder suffix run_<eyes>_<run_name> (Slurm sets --run-name slurm_$JOBID).
+# run_name: null
