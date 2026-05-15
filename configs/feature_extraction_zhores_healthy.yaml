@@ -1,0 +1,14 @@
+# Zhores: healthy cohort — edit data_dir if your GPFS path differs.
+data_dir: /gpfs/neuro_ml/eeg_predict/eeg_foundation_model/data
+cohort_name: healthy
+eyes_condition: closed
+max_per_group: null
+include_literature: false
+results_dir: results
+
+dfa_scales: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+dfa_scales_unit: seconds
+dfa_polynomial_order: 1
+dfa_max_samples: 5000
+scaler_fit_train_fraction: 0.8
+seed: 42

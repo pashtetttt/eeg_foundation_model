@@ -1,0 +1,32 @@
+# XGBoost on DFA features only (Hardstone-style block from compute_all_features).
+feature_source: dfa_cache
+
+data_dir: data
+cohort_name: healthy
+eyes_condition: closed
+results_dir: results
+
+class_names:
+  - preschooler
+  - primary
+  - teenager
+  - adolescence
+
+features:
+  use_handcrafted: false
+  use_dfa: true
+  use_embeddings: false
+
+train:
+  test_size: 0.2
+  random_state: 42
+  xgb_n_estimators: 300
+  xgb_max_depth: 8
+  xgb_learning_rate: 0.05
+  xgb_subsample: 0.9
+  xgb_colsample_bytree: 0.85
+  xgb_reg_lambda: 1.0
+
+output:
+  # Per-cohort results: results/classification/xgb_dfa/<eyes>_<cohort>/
+  run_subdir: classification/xgb_dfa
